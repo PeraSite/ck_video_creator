@@ -241,12 +241,9 @@ cython_debug/
 
 # CK Video Creator
 musics/**
-!musics/.gitkeep
 voices/**
-!voices/.gitkeep
 final_audio.mp3
 final_video.mp4
 image.png
-순서.txt
 
 .idea/
