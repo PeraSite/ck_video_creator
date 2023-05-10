@@ -1,46 +1,112 @@
 import os
-import subprocess
 import shlex
+import subprocess
+import sys
 
 import ffmpeg
+from PyQt5.QtCore import *
+from PyQt5.QtWidgets import *
 
-input_data = [
-    "voices/음악방송_11회_녹음_1.m4a",
-    "voices/음악방송_11회_녹음_2.m4a",
-    "voices/음악방송_11회_녹음_3.m4a",
-    "musics/강하늘-24-자화상.mp3",
-    "musics/박효신-01-그 날 (Original Ver.).mp3",
-    "musics/안예은-01-8호 감방의 노래.mp3",
-    "voices/음악방송_11회_녹음_4.m4a",
-    "musics/김고은-06-그대 향한 나의 꿈.mp3",
-    "musics/정성화,조재윤,배정남,이현우-14-누가 죄인인가.mp3",
-    "voices/음악방송_11회_녹음_5.m4a",
-    "voices/음악방송_11회_녹음_6.m4a",
-    "voices/음악방송_11회_녹음_7.m4a",
-    "voices/음악방송_11회_녹음_8.m4a",
-]
 
+class SoundItem(QWidget):
+    def __init__(self, file_name, file_path, is_voice):
+        QWidget.__init__(self, flags=Qt.Widget)
+        layout = QHBoxLayout()
+        layout.setContentsMargins(5, 5, 5, 5)
+
+        layout.addWidget(QLabel("녹음" if is_voice else "음악"), 1, alignment=Qt.AlignCenter)
+
+        self.intro_checkbox = QCheckBox()
+        layout.addWidget(self.intro_checkbox, 1, alignment=Qt.AlignCenter)
+
+        layout.addWidget(QLabel(file_name), 8)
+        self.setLayout(layout)
+
+        self.file_name = file_name
+        self.file_path = file_path
+        self.is_voice = is_voice
+
+
+class Main(QDialog):
+    def __init__(self):
+        super().__init__()
+        self.setFixedSize(500, 500)
+        self.init_ui()
+        self.setFocus()
+        self.setWindowTitle("청강대 아침음악방송 편집기")
+
+    def init_ui(self):
+        root_layout = QVBoxLayout()
+
+        voice_files = os.listdir("voices/")
+        music_files = os.listdir("musics/")
+        self.sound_list = QListWidget()
+
+        for file_name in voice_files + music_files:
+            is_voice = file_name in voice_files
+            file_path = ("voices/" if is_voice else "musics/") + file_name
+            item_widget = SoundItem(file_name, file_path, is_voice)
+
+            item = QListWidgetItem(self.sound_list)
+            size = item_widget.sizeHint()
+            size.setHeight(30)
+            item.setSizeHint(size)
+            self.sound_list.addItem(item)
+            self.sound_list.setItemWidget(item, item_widget)
+
+        self.sound_list.setDragDropMode(QAbstractItemView.InternalMove)
+
+        start_button = QPushButton("시작하기")
+        start_button.clicked.connect(self.start)
+
+        root_layout.addWidget(self.sound_list)
+        root_layout.addWidget(start_button)
+        self.setLayout(root_layout)
+        self.show()
+
+    def start(self):
+        # UI에서 파일 데이터 가져오기
+        for widget in self.sound_list.findItems('*', Qt.MatchWildcard):
+            item_widget = widget.listWidget().itemWidget(widget)
+
+            file_path = item_widget.file_path
+            input_data.append(file_path)
+
+            # 인트로 데이터 가져오기
+            if item_widget.intro_checkbox.isChecked():
+                if item_widget.is_voice:
+                    intro_data["voices"].append(file_path)
+                else:
+                    intro_data["background_music"] = file_path
+
+        file_list = read_input()
+        voices = enhance_all_voices()
+        intro_audio = create_intro_audio(voices)
+
+        if not os.path.exists("final_audio.mp3"):
+            final_audio = create_final_audio(intro_audio, voices, file_list)
+            (
+                final_audio.output("final_audio.mp3")
+                .overwrite_output()
+                .run()
+            )
+        if os.path.exists("image.png"):
+            create_final_video()
+
+        QMessageBox.information(self, "완료", "완료되었습니다.")
+
+
+input_data = []
 intro_data = {
-    "background_music": "musics/강하늘-24-자화상.mp3",
-    "voices": [0, 1, 2]
+    "background_music": None,
+    "voices": []
 }
 
 
 def main():
-    file_list = read_input()
-    voices = enhance_all_voices()
-    intro_audio = create_intro_audio(voices, file_list)
-
-    final_audio = create_final_audio(intro_audio, voices, file_list)
-    (
-        final_audio.output("final_audio.mp3")
-        .overwrite_output()
-        .run()
-    )
-    if os.path.exists("image.png"):
-        create_final_video()
-
-    print("Done!")
+    app = QApplication(sys.argv)
+    main = Main()
+    app.exec()
 
 
 def read_input():
@@ -59,7 +125,7 @@ def create_final_video():
     print("Creating final video...")
 
     command = "ffmpeg -r 1 -loop 1 -y -i image.png -i final_audio.mp3 -r 1 -pix_fmt yuv420p -vf scale=-1:1080 " \
-              "-shortest output.mp4"
+              "-shortest final_video.mp4"
 
     subprocess.run(shlex.split(command), shell=True, check=True)
 
@@ -85,7 +151,7 @@ def create_final_audio(intro_audio, voices, file_list: list[tuple[str, bool]]):
     )
 
 
-def create_intro_audio(voices, file_list: list[tuple[str, bool]]):
+def create_intro_audio(voices):
     print(f"Processing Intro...")
 
     # 처음으로 등장하는 음성과 음악 파일을 찾아서 처리
@@ -94,9 +160,9 @@ def create_intro_audio(voices, file_list: list[tuple[str, bool]]):
 
     print(f" - Voices:")
     intro_voices = []
-    for i in intro_data["voices"]:
-        print(f"   - {file_list[i][0]}")
-        intro_voices.append(voices[file_list[i][0]])
+    for intro_voice_path in intro_data["voices"]:
+        print(f"   - {intro_voice_path}")
+        intro_voices.append(voices[intro_voice_path])
 
     music_audio = (
         ffmpeg
