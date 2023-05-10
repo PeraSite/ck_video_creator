@@ -6,6 +6,7 @@ import sys
 import ffmpeg
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
+from PyQt5.QtWidgets import QVBoxLayout, QLineEdit, QListWidget, QListWidgetItem, QAbstractItemView, QPushButton
 
 
 class SoundItem(QWidget):
@@ -30,18 +31,24 @@ class SoundItem(QWidget):
 class Main(QDialog):
     def __init__(self):
         super().__init__()
+
+        # 윈도우 설정
         self.setFixedSize(500, 500)
-        self.init_ui()
         self.setFocus()
         self.setWindowTitle("청강대 아침음악방송 편집기")
 
-    def init_ui(self):
+        # UI 표기
         root_layout = QVBoxLayout()
 
+        # 회차 입력
+        self.number_input = QLineEdit()
+        self.number_input.setPlaceholderText("회차를 입력하세요")
+        root_layout.addWidget(self.number_input)
+
+        # 사운드 파일 목록
         voice_files = os.listdir("voices/")
         music_files = os.listdir("musics/")
         self.sound_list = QListWidget()
-
         for file_name in voice_files + music_files:
             is_voice = file_name in voice_files
             file_path = ("voices/" if is_voice else "musics/") + file_name
@@ -53,18 +60,21 @@ class Main(QDialog):
             item.setSizeHint(size)
             self.sound_list.addItem(item)
             self.sound_list.setItemWidget(item, item_widget)
-
         self.sound_list.setDragDropMode(QAbstractItemView.InternalMove)
+        root_layout.addWidget(self.sound_list)
 
+        # 시작 버튼
         start_button = QPushButton("시작하기")
         start_button.clicked.connect(self.start)
-
-        root_layout.addWidget(self.sound_list)
         root_layout.addWidget(start_button)
+
         self.setLayout(root_layout)
         self.show()
 
     def start(self):
+        # 회차 가져오기
+        number = self.number_input.text()
+
         # UI에서 파일 데이터 가져오기
         for widget in self.sound_list.findItems('*', Qt.MatchWildcard):
             item_widget = widget.listWidget().itemWidget(widget)
@@ -83,15 +93,16 @@ class Main(QDialog):
         voices = enhance_all_voices()
         intro_audio = create_intro_audio(voices)
 
-        if not os.path.exists("final_audio.mp3"):
+        if not os.path.exists(f"아침음악방송_{number}회_오디오.mp3"):
             final_audio = create_final_audio(intro_audio, voices, file_list)
             (
-                final_audio.output("final_audio.mp3")
+                final_audio.output(f"아침음악방송_{number}회_오디오.mp3")
                 .overwrite_output()
                 .run()
             )
+
         if os.path.exists("image.png"):
-            create_final_video()
+            create_final_video(f"아침음악방송_{number}회_영상.mp4")
 
         QMessageBox.information(self, "완료", "완료되었습니다.")
 
@@ -121,11 +132,11 @@ def read_input():
     return file_list
 
 
-def create_final_video():
+def create_final_video(file_name: str):
     print("Creating final video...")
 
     command = "ffmpeg -r 1 -loop 1 -y -i image.png -i final_audio.mp3 -r 1 -pix_fmt yuv420p -vf scale=-1:1080 " \
-              "-shortest final_video.mp4"
+              "-shortest " + file_name
 
     subprocess.run(shlex.split(command), shell=True, check=True)
 
