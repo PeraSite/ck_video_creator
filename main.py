@@ -89,25 +89,25 @@ class Main(QDialog):
                 else:
                     intro_data["background_music"] = file_path
 
-        # Intro Data 확인
-        if intro_data["background_music"] is None:
-            QMessageBox.critical(self, "오류", "인트로 배경음악이 없습니다.")
-            return
-
-        if len(intro_data["voices"]) == 0:
-            QMessageBox.critical(self, "오류", "인트로 음성이 없습니다.")
-            return
-
         # 회차 확인
         if number == "":
             QMessageBox.critical(self, "오류", "회차를 입력하세요.")
             return
 
-        file_list = read_input()
-        voices = enhance_all_voices()
-        intro_audio = create_intro_audio(voices)
-
         if not os.path.exists(f"아침음악방송_{number}회_오디오.mp3"):
+            # Intro Data 확인
+            if intro_data["background_music"] is None:
+                QMessageBox.critical(self, "오류", "인트로 배경음악이 없습니다.")
+                return
+
+            if len(intro_data["voices"]) == 0:
+                QMessageBox.critical(self, "오류", "인트로 음성이 없습니다.")
+                return
+
+            file_list = read_input()
+            voices = enhance_all_voices()
+            intro_audio = create_intro_audio(voices)
+
             final_audio = create_final_audio(intro_audio, voices, file_list)
             (
                 final_audio.output(f"아침음악방송_{number}회_오디오.mp3")
