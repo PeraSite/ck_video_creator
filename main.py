@@ -230,13 +230,13 @@ def enhance_voice(input_file: str):
     return (
         ffmpeg
         .input(input_file)
-        .filter("silenceremove", start_periods=1, start_silence=0.1, start_threshold="-40dB")
+        .filter("silenceremove", start_periods=1, start_silence=0.1, start_threshold="-30dB")
         .filter("adelay", "500|500")
         .filter("areverse")
-        .filter("silenceremove", start_periods=1, start_silence=0.1, start_threshold="-40dB")
+        .filter("silenceremove", start_periods=1, start_silence=0.1, start_threshold="-30dB")
         .filter("adelay", "1500|1500")
         .filter("areverse")
-        .filter("loudnorm", i=-18, lra=11, tp=-1.5)
+        .filter("loudnorm", i=-18, lra=7, tp=-1.5, measured_thresh=-30)
     )
 
 
