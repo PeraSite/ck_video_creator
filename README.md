@@ -39,4 +39,4 @@
 
 ![image](https://github.com/PeraSite/ck_video_creator/assets/19837403/f6486cac-3cd1-4c70-8f7a-f2e0acb64cef)
 
-8. 시작 버튼을 누르면 제작됩니다. image.png를 넣지 않았을 경우 오디오 파일만 제작되고, image.png 파일읋 넣었을 경우 영상 파일까지 제작됩니다.
+8. 시작 버튼을 누르면 제작됩니다. image.png를 넣지 않았을 경우 오디오 파일만 제작되고, image.png 파일을 넣었을 경우 영상 파일까지 제작됩니다.
